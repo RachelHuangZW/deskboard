@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Desk Board</title>
+<style>
+  :root {
+    --bg: #0e1014;
+    --panel: #161920;
+    --panel-2: #1d212a;
+    --border: #252a35;
+    --text: #e6e8ec;
+    --muted: #8590a2;
+    --faint: #4a5263;
+    --master: #7aa2f7;
+    --daily: #73c991;
+    --timer: #e0af68;
+    --danger: #f7768e;
+    --radius: 16px;
+    color-scheme: dark;
+  }
+  :root[data-theme="light"] {
+    --bg: #f3f4f6;
+    --panel: #ffffff;
+    --panel-2: #f2f4f7;
+    --border: #e4e7ec;
+    --text: #1d2129;
+    --muted: #6b7280;
+    --faint: #c3c8d1;
+    --master: #3b6fe0;
+    --daily: #2f9e5a;
+    --timer: #d08a1c;
+    --danger: #e03157;
+    color-scheme: light;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  input { font: inherit; color: inherit; }
+
+  /* ---------- 顶栏 ---------- */
+  .topbar {
+    display: flex; align-items: center; justify-content: flex-end;
+    gap: 12px; padding: 14px 22px 0;
+  }
+  .clocks { display: flex; align-items: center; gap: 18px; color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .clocks b { color: var(--text); font-weight: 500; margin-left: 4px; }
+  .icon-btn {
+    background: transparent; border: 1px solid var(--border); border-radius: 8px;
+    width: 30px; height: 30px; display: grid; place-items: center; color: var(--muted);
+  }
+  .icon-btn:hover { color: var(--text); background: var(--panel-2); }
+
+  /* ---------- 三列布局 ---------- */
+  .board {
+    flex: 1; min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(300px, .9fr);
+    gap: 16px; padding: 14px 22px 22px;
+  }
+  .panel {
+    --c: var(--master);
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    display: flex; flex-direction: column;
+    min-height: 0; overflow: hidden;
+  }
+  .panel.daily { --c: var(--daily); }
+  .panel.timer { --c: var(--timer); }
+
+  .panel-head { padding: 16px 18px 6px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .panel-head h2 { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .panel-head h2::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+  .count { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .sub { padding: 0 18px 8px; font-size: 12px; color: var(--muted); }
+
+  /* ---------- 添加输入 ---------- */
+  .add-form { display: flex; gap: 8px; padding: 6px 14px 10px; }
+  .add-form input {
+    flex: 1; min-width: 0; height: 38px; padding: 0 12px;
+    background: var(--panel-2); border: 1px solid transparent; border-radius: 10px; outline: none;
+  }
+  .add-form input:focus { border-color: var(--c); }
+  .add-form input::placeholder { color: var(--muted); }
+  .add-form button {
+    height: 38px; padding: 0 14px; border: none; border-radius: 10px;
+    background: var(--c); color: #fff; font-weight: 500;
+  }
+  .add-form button:hover { filter: brightness(1.08); }
+
+  /* ---------- 列表（独立滚动） ---------- */
+  .list { flex: 1; min-height: 0; overflow-y: auto; list-style: none; padding: 2px 8px 8px; }
+  .list::-webkit-scrollbar { width: 8px; }
+  .list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 8px; }
+  .item {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 8px 10px; border-radius: 10px;
+  }
+  .item:hover { background: var(--panel-2); }
+  .check {
+    appearance: none; -webkit-appearance: none; flex: none;
+    width: 18px; height: 18px; margin-top: 2px;
+    border: 1.5px solid var(--faint); border-radius: 5px;
+    display: grid; place-items: center; cursor: pointer; transition: all .15s;
+  }
+  .check:hover { border-color: var(--c); }
+  .check:checked { background: var(--c); border-color: var(--c); }
+  .check:checked::after {
+    content: ""; width: 4px; height: 9px; margin-top: -2px;
+    border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg);
+  }
+  .text { flex: 1; min-width: 0; word-break: break-word; white-space: pre-wrap; outline: none; border-radius: 4px; }
+  .text[contenteditable="true"] { background: var(--panel); box-shadow: 0 0 0 1px var(--c); padding: 0 4px; }
+  .item.done .text { color: var(--muted); text-decoration: line-through; }
+  .del {
+    flex: none; width: 24px; height: 24px; border: none; border-radius: 6px; background: transparent;
+    color: var(--muted); opacity: 0; display: grid; place-items: center; font-size: 16px; line-height: 1;
+  }
+  .item:hover .del, .del:focus-visible { opacity: 1; }
+  .del:hover { color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); }
+  .empty { color: var(--muted); text-align: center; padding: 40px 0; font-size: 13px; }
+
+  .link { background: none; border: none; color: var(--muted); font-size: 12px; }
+  .link:hover { color: var(--text); }
+
+  /* ---------- 倒计时 ---------- */
+  .timer-body { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; padding: 10px 20px 20px; }
+  .ring { position: relative; width: min(240px, 100%); aspect-ratio: 1; }
+  .ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .ring circle { fill: none; stroke-width: 6; }
+  .ring .track { stroke: var(--panel-2); }
+  .ring .bar { stroke: var(--c); stroke-linecap: round; transition: stroke-dashoffset .25s linear; }
+  .ring .display {
+    position: absolute; inset: 0; display: grid; place-items: center; text-align: center;
+  }
+  .digits { font-size: clamp(30px, 3.4vw, 42px); font-weight: 300; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+  .state { font-size: 12px; color: var(--muted); margin-top: -4px; }
+  .panel.timer.ringing .digits { color: var(--c); animation: pulse 1s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .35; } }
+
+  .time-input {
+    width: 100%; max-width: 260px; height: 42px; text-align: center;
+    background: var(--panel-2); border: 1px solid transparent; border-radius: 10px; outline: none;
+    font-size: 18px; font-variant-numeric: tabular-nums; letter-spacing: .06em;
+  }
+  .time-input:focus { border-color: var(--c); }
+  .time-input.invalid { border-color: var(--danger); animation: shake .3s; }
+  .time-input:disabled { opacity: .5; }
+  @keyframes shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+  .presets { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+  .chip {
+    border: 1px solid var(--border); background: transparent; border-radius: 999px;
+    padding: 3px 11px; font-size: 12px; color: var(--muted);
+  }
+  .chip:hover { color: var(--text); border-color: var(--faint); }
+  .controls { display: flex; gap: 10px; width: 100%; max-width: 300px; }
+  .controls button {
+    flex: 1; height: 40px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--panel-2); font-weight: 500;
+  }
+  .controls button.primary { background: var(--c); border-color: var(--c); color: #fff; }
+  .controls button:hover:not(:disabled) { filter: brightness(1.08); }
+  .controls button:disabled { opacity: .4; cursor: default; }
+  .input-group { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; }
+
+  /* ---------- 桌面小组件模式（在 DeskBoard.app 中运行时） ---------- */
+  /* 窗口本身全透明，直接透出桌面壁纸；卡片底色可在菜单栏「卡片底色」中切换 */
+  .pin-btn { display: none; }
+  :root.native body { background: transparent; }
+  :root.native {
+    --panel: rgba(10, 12, 16, .30);
+    --panel-2: rgba(255, 255, 255, .10);
+    --border: rgba(255, 255, 255, .12);
+  }
+  :root.native[data-tint="none"] { --panel: transparent; --border: rgba(255, 255, 255, .22); }
+  :root.native[data-tint="dark"] { --panel: rgba(10, 12, 16, .58); }
+  :root.native[data-theme="light"] {
+    --panel: rgba(255, 255, 255, .38);
+    --panel-2: rgba(255, 255, 255, .6);
+    --border: rgba(255, 255, 255, .5);
+  }
+  :root.native[data-theme="light"][data-tint="none"] { --panel: transparent; }
+  :root.native[data-theme="light"][data-tint="dark"] { --panel: rgba(255, 255, 255, .72); }
+  /* 深色主题下文字加阴影，保证在各种壁纸上可读 */
+  :root.native:not([data-theme="light"]) body { text-shadow: 0 1px 3px rgba(0, 0, 0, .55); }
+  :root.native button, :root.native input { text-shadow: none; }
+
+  :root.native .topbar {
+    height: 40px; padding: 0 6px;
+    -webkit-user-select: none; user-select: none;
+  }
+  :root.native .board { padding: 2px 4px 4px; gap: 12px; }
+  :root.native .pin-btn { display: grid; }
+  .pin-btn.on { color: var(--timer); border-color: var(--timer); }
+  :root.native .icon-btn { background: var(--panel); }
+
+  /* 窄窗口：改为纵向堆叠，整页滚动 */
+  @media (max-width: 860px) {
+    body { overflow: auto; }
+    .board { grid-template-columns: 1fr; }
+    .panel { height: 70vh; }
+    .clocks .local { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="clocks">
+    <div class="local">本地<b id="localClock">--:--</b></div>
+    <div>纽约<b id="nyClock">--:--</b></div>
+    <button class="icon-btn pin-btn" id="pinBtn" title="置于所有窗口之上">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M9 3h6l-1 6 4 4H6l4-4z"/></svg>
+    </button>
+    <button class="icon-btn" id="themeBtn" title="切换深色 / 浅色">◐</button>
+  </div>
+</header>
+
+<main class="board">
+  <!-- 1. 总任务清单 -->
+  <section class="panel master">
+    <div class="panel-head">
+      <h2>总任务清单</h2>
+      <span class="count" id="masterCount"></span>
+    </div>
+    <form class="add-form" id="masterForm" autocomplete="off">
+      <input placeholder="添加长期任务，回车确认…" maxlength="500">
+      <button type="submit">添加</button>
+    </form>
+    <ul class="list" id="masterList"></ul>
+  </section>
+
+  <!-- 2. 每日任务清单 -->
+  <section class="panel daily">
+    <div class="panel-head">
+      <h2>每日任务清单</h2>
+      <span class="count" id="dailyCount"></span>
+    </div>
+    <form class="add-form" id="dailyForm" autocomplete="off">
+      <input placeholder="添加今日任务，回车确认…" maxlength="500">
+      <button type="submit">添加</button>
+    </form>
+    <ul class="list" id="dailyList"></ul>
+  </section>
+
+  <!-- 3. 倒计时 -->
+  <section class="panel timer" id="timerPanel">
+    <div class="panel-head">
+      <h2>倒计时</h2>
+      <button class="link" id="testSound" title="试听提示音">🔔 试听</button>
+    </div>
+    <div class="timer-body">
+      <div class="ring">
+        <svg viewBox="0 0 200 200">
+          <circle class="track" cx="100" cy="100" r="90"></circle>
+          <circle class="bar" id="ringBar" cx="100" cy="100" r="90"></circle>
+        </svg>
+        <div class="display">
+          <div>
+            <div class="digits" id="digits">00:25:00</div>
+            <div class="state" id="timerState">就绪</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <input class="time-input" id="timeInput" value="00:25:00" placeholder="HH:MM:SS" inputmode="numeric">
+        <div class="presets">
+          <button class="chip" data-preset="00:05:00">5 分</button>
+          <button class="chip" data-preset="00:25:00">25 分</button>
+          <button class="chip" data-preset="00:45:00">45 分</button>
+          <button class="chip" data-preset="01:00:00">1 时</button>
+          <button class="chip" data-preset="02:00:00">2 时</button>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button class="primary" id="startBtn">开始</button>
+        <button id="pauseBtn">暂停</button>
+        <button id="resetBtn">重置</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+  'use strict';
+
+  /* ================= 工具 ================= */
+  const $ = (id) => document.getElementById(id);
+  const PREFIX = 'deskboard.';
+
+  // 在 DeskBoard.app 中运行时，数据经原生桥接写入 JSON 文件；在浏览器中则使用 localStorage
+  const bridge = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.deskboard;
+  const NATIVE = !!bridge;
+  const post = (msg) => { try { bridge.postMessage(msg); } catch {} };
+  const nativeData = (window.__DESKBOARD__ && window.__DESKBOARD__.data) || {};
+  if (NATIVE) {
+    document.documentElement.classList.add('native');
+    document.documentElement.dataset.tint = (window.__DESKBOARD__ && window.__DESKBOARD__.tint) || 'light';
+  }
+  window.__deskboardSetTint = (v) => { document.documentElement.dataset.tint = v; };
+
+  const store = {
+    get(key, fallback) {
+      try {
+        const raw = NATIVE ? nativeData[key] : localStorage.getItem(PREFIX + key);
+        return raw == null ? fallback : JSON.parse(raw);
+      } catch { return fallback; }
+    },
+    set(key, value) {
+      const json = JSON.stringify(value);
+      if (NATIVE) {
+        nativeData[key] = json;
+        post({ type: 'set', key, json });
+        return;
+      }
+      try { localStorage.setItem(PREFIX + key, json); } catch {}
+    },
+  };
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  const pad = (n) => String(n).padStart(2, '0');
+
+  /* ================= 主题 ================= */
+  const root = document.documentElement;
+  function applyTheme(t) {
+    root.dataset.theme = t;
+    store.set('theme', t);
+    if (NATIVE) post({ type: 'theme', value: t });
+  }
+  applyTheme(store.get('theme', NATIVE ? 'dark' : matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'));
+  $('themeBtn').onclick = () => applyTheme(root.dataset.theme === 'light' ? 'dark' : 'light');
+
+  $('pinBtn').onclick = () => post({ type: 'pin' });
+  window.__deskboardPinned = (on) => $('pinBtn').classList.toggle('on', on);
+
+  /* ================= 纽约时间 & 每日周期 ================= */
+  const NY_TZ = 'America/New_York';
+  const RESET_HOUR = 8;
+  const nyFmt = new Intl.DateTimeFormat('en-US', {
+    timeZone: NY_TZ, year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
+  });
+  // 取纽约当地的年月日时分（Intl 会自动处理夏令时 EST/EDT）
+  function nyParts(date = new Date()) {
+    const o = {};
+    for (const p of nyFmt.formatToParts(date)) o[p.type] = p.value;
+    return { y: +o.year, m: +o.month, d: +o.day, h: +o.hour % 24, mi: +o.minute };
+  }
+  // 周期标识：纽约时间 08:00 之前算作前一天的周期
+  function cycleKey(date = new Date()) {
+    const t = nyParts(date);
+    const dt = new Date(Date.UTC(t.y, t.m - 1, t.d));
+    if (t.h < RESET_HOUR) dt.setUTCDate(dt.getUTCDate() - 1);
+    return dt.toISOString().slice(0, 10);
+  }
+
+  /* ================= 通用清单组件 ================= */
+  function createList({ listEl, countEl, formEl, emptyText, load, save }) {
+    let items = load();
+
+    function commit() { save(items); render(); }
+
+    function render() {
+      listEl.textContent = '';
+      const sorted = [...items.filter(i => !i.done), ...items.filter(i => i.done)];
+      if (!sorted.length) {
+        const li = document.createElement('li');
+        li.className = 'empty';
+        li.textContent = emptyText;
+        listEl.appendChild(li);
+      }
+      for (const item of sorted) listEl.appendChild(renderItem(item));
+      const done = items.filter(i => i.done).length;
+      countEl.textContent = items.length ? `${done} / ${items.length}` : '';
+    }
+
+    function renderItem(item) {
+      const li = document.createElement('li');
+      li.className = 'item' + (item.done ? ' done' : '');
+
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.className = 'check';
+      cb.checked = item.done;
+      cb.onchange = () => { item.done = cb.checked; commit(); };
+
+      const text = document.createElement('span');
+      text.className = 'text';
+      text.textContent = item.text;
+      text.title = '双击编辑';
+      text.ondblclick = () => startEdit(text, item);
+
+      const del = document.createElement('button');
+      del.className = 'del';
+      del.title = '删除';
+      del.textContent = '×';
+      del.onclick = () => { items = items.filter(i => i.id !== item.id); commit(); };
+
+      li.append(cb, text, del);
+      return li;
+    }
+
+    function startEdit(el, item) {
+      el.contentEditable = 'true';
+      el.focus();
+      document.getSelection().selectAllChildren(el);
+      let cancelled = false;
+      el.onkeydown = (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); el.blur(); }
+        if (e.key === 'Escape') { cancelled = true; el.blur(); }
+      };
+      el.onblur = () => {
+        el.contentEditable = 'false';
+        el.onkeydown = el.onblur = null;
+        const v = el.textContent.trim();
+        if (!cancelled && v) item.text = v;
+        commit();
+      };
+    }
+
+    formEl.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const input = formEl.querySelector('input');
+      const v = input.value.trim();
+      if (!v) return;
+      items.push({ id: uid(), text: v, done: false, created: Date.now() });
+      input.value = '';
+      commit();
+      listEl.scrollTop = 0;
+    });
+
+    render();
+    return {
+      reload() { items = load(); render(); },
+      clear() { items = []; commit(); },
+    };
+  }
+
+  /* ================= 1. 总任务清单 ================= */
+  const master = createList({
+    listEl: $('masterList'), countEl: $('masterCount'), formEl: $('masterForm'),
+    emptyText: '还没有长期任务',
+    load: () => store.get('master', []),
+    save: (items) => store.set('master', items),
+  });
+
+  /* ================= 2. 每日任务清单 ================= */
+  // 存储结构：{ cycle: 'YYYY-MM-DD', items: [...] }，周期不一致即视为过期
+  let dailyCycle = cycleKey();
+  const daily = createList({
+    listEl: $('dailyList'), countEl: $('dailyCount'), formEl: $('dailyForm'),
+    emptyText: '今天还没有任务',
+    load: () => {
+      const d = store.get('daily', null);
+      return d && d.cycle === dailyCycle ? d.items : [];
+    },
+    save: (items) => store.set('daily', { cycle: dailyCycle, items }),
+  });
+  // 打开时若数据已属于旧周期，立即写回空列表
+  if ((store.get('daily', null) || {}).cycle !== dailyCycle) daily.clear();
+
+  function checkDailyReset() {
+    const key = cycleKey();
+    if (key !== dailyCycle) {
+      dailyCycle = key;
+      daily.clear();
+    }
+  }
+
+  // 多窗口同步
+  window.addEventListener('storage', (e) => {
+    if (e.key === PREFIX + 'master') master.reload();
+    if (e.key === PREFIX + 'daily') daily.reload();
+  });
+
+  /* ================= 时钟 ================= */
+  function updateClocks() {
+    const now = new Date();
+    const t = nyParts(now);
+    $('nyClock').textContent = `${pad(t.h)}:${pad(t.mi)}`;
+    $('localClock').textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    checkDailyReset();
+  }
+  updateClocks();
+  setInterval(updateClocks, 10_000);
+  // 电脑休眠唤醒 / 切回窗口时立即检查
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) updateClocks(); });
+  window.addEventListener('focus', updateClocks);
+
+  /* ================= 3. 倒计时 ================= */
+  let audioCtx = null;
+  let scheduledNodes = [];
+
+  function ensureAudio() {
+    if (!audioCtx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audioCtx = new AC();
+    }
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+  }
+
+  // 温和的三音和弦提示音（A-C#-E 琶音），重复 3 遍
+  function chimeNodes(delaySec) {
+    const ctx = ensureAudio();
+    if (!ctx) return [];
+    const notes = [880, 1108.73, 1318.51];
+    const t0 = ctx.currentTime + Math.max(0.05, delaySec);
+    const nodes = [];
+    for (let r = 0; r < 3; r++) {
+      notes.forEach((freq, i) => {
+        const t = t0 + r * 1.4 + i * 0.16;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(0.22, t + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 1.1);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + 1.2);
+        nodes.push(osc);
+      });
+    }
+    return nodes;
+  }
+  // 开始时就用音频时钟预约提示音：浏览器在后台会节流 setInterval，但音频时钟不受影响，保证准点响铃
+  function scheduleChime(delaySec) { cancelChime(); scheduledNodes = chimeNodes(delaySec); }
+  // App 中由原生定时并播放系统提示音；浏览器中用 Web Audio
+  function armAlarm() { NATIVE ? post({ type: 'alarm', at: T.endAt }) : scheduleChime(T.remainingMs / 1000); }
+  function disarmAlarm() { NATIVE ? post({ type: 'alarm', at: null }) : cancelChime(); }
+  function cancelChime() {
+    for (const n of scheduledNodes) { try { n.stop(); n.disconnect(); } catch {} }
+    scheduledNodes = [];
+  }
+
+  function parseHMS(str) {
+    const parts = str.trim().split(/[:：]/).map(s => s.trim());
+    if (!parts.length || parts.some(p => !/^\d+$/.test(p)) || parts.length > 3) return null;
+    let [h, m, s] = [0, 0, 0];
+    if (parts.length === 3) [h, m, s] = parts.map(Number);
+    else if (parts.length === 2) [m, s] = parts.map(Number);
+    else m = Number(parts[0]);              // 纯数字 = 分钟
+    const total = h * 3600 + m * 60 + s;
+    return total > 0 && total < 100 * 3600 ? total : null;
+  }
+  const fmtHMS = (sec) => `${pad(Math.floor(sec / 3600))}:${pad(Math.floor(sec % 3600 / 60))}:${pad(sec % 60)}`;
+
+  const el = {
+    panel: $('timerPanel'), digits: $('digits'), state: $('timerState'), input: $('timeInput'),
+    start: $('startBtn'), pause: $('pauseBtn'), reset: $('resetBtn'), bar: $('ringBar'),
+  };
+  const CIRC = 2 * Math.PI * 90;
+  el.bar.style.strokeDasharray = CIRC;
+
+  const T = { state: 'idle', totalSec: 0, remainingMs: 0, endAt: 0, iv: null };
+  const STATE_LABEL = { idle: '就绪', running: '进行中', paused: '已暂停', done: '时间到！' };
+
+  function render() {
+    const sec = Math.ceil(T.remainingMs / 1000);
+    el.digits.textContent = fmtHMS(sec);
+    el.state.textContent = STATE_LABEL[T.state];
+    const ratio = T.totalSec ? T.remainingMs / (T.totalSec * 1000) : 1;
+    el.bar.style.strokeDashoffset = CIRC * (1 - ratio);
+    el.start.disabled = T.state === 'running';
+    el.start.textContent = T.state === 'paused' ? '继续' : '开始';
+    el.pause.disabled = T.state !== 'running';
+    el.input.disabled = T.state === 'running' || T.state === 'paused';
+    el.panel.classList.toggle('ringing', T.state === 'done');
+    document.title = T.state === 'running' || T.state === 'paused'
+      ? `${fmtHMS(sec)} · Desk Board`
+      : T.state === 'done' ? '⏰ 时间到 · Desk Board' : 'Desk Board';
+  }
+
+  function loadFromInput(showError) {
+    const sec = parseHMS(el.input.value);
+    if (sec == null) {
+      if (showError) {
+        el.input.classList.remove('invalid');
+        void el.input.offsetWidth;
+        el.input.classList.add('invalid');
+      }
+      return false;
+    }
+    el.input.classList.remove('invalid');
+    T.totalSec = sec;
+    T.remainingMs = sec * 1000;
+    store.set('timerInput', fmtHMS(sec));
+    return true;
+  }
+
+  function start() {
+    if (T.state === 'running') return;
+    if (T.state !== 'paused') {
+      if (!loadFromInput(true)) return;
+      el.input.value = fmtHMS(T.totalSec);
+    }
+    T.endAt = Date.now() + T.remainingMs;
+    T.state = 'running';
+    armAlarm();
+    clearInterval(T.iv);
+    T.iv = setInterval(tick, 200);
+    render();
+  }
+
+  function pause() {
+    if (T.state !== 'running') return;
+    clearInterval(T.iv);
+    disarmAlarm();
+    T.remainingMs = Math.max(0, T.endAt - Date.now());
+    T.state = 'paused';
+    render();
+  }
+
+  function reset() {
+    clearInterval(T.iv);
+    disarmAlarm();
+    T.state = 'idle';
+    if (!loadFromInput(false)) T.remainingMs = T.totalSec * 1000;
+    render();
+  }
+
+  function tick() {
+    const left = T.endAt - Date.now();
+    if (left <= 0) return finish();
+    T.remainingMs = left;
+    render();
+  }
+
+  function finish() {
+    clearInterval(T.iv);
+    T.remainingMs = 0;
+    T.state = 'done';
+    if (!NATIVE) {
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+      if (!scheduledNodes.length) scheduledNodes = chimeNodes(0);
+    }
+    render();
+  }
+
+  el.start.onclick = start;
+  el.pause.onclick = pause;
+  el.reset.onclick = reset;
+  $('testSound').onclick = () => NATIVE ? post({ type: 'chime' }) : chimeNodes(0);
+
+  el.input.addEventListener('input', () => {
+    if (T.state === 'idle' || T.state === 'done') {
+      if (T.state === 'done') { disarmAlarm(); T.state = 'idle'; }
+      if (loadFromInput(false)) render();
+    }
+  });
+  el.input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { el.input.blur(); start(); } });
+  el.input.addEventListener('blur', () => { if (parseHMS(el.input.value) != null && T.state === 'idle') el.input.value = fmtHMS(T.totalSec); });
+
+  document.querySelectorAll('[data-preset]').forEach(btn => {
+    btn.onclick = () => { el.input.value = btn.dataset.preset; reset(); };
+  });
+
+  // 空格：开始 / 暂停（输入框聚焦时不拦截）
+  document.addEventListener('keydown', (e) => {
+    if (e.code !== 'Space') return;
+    const t = e.target;
+    if (t.tagName === 'INPUT' || t.isContentEditable || t.tagName === 'BUTTON') return;
+    e.preventDefault();
+    T.state === 'running' ? pause() : start();
+  });
+
+  el.input.value = store.get('timerInput', '00:25:00');
+  reset();
+
+  // 原生端在闹钟触发 / 唤醒时调用，立即刷新界面
+  window.__deskboardWake = () => { updateClocks(); if (T.state === 'running') tick(); };
+})();
+</script>
+</body>
+</html>
