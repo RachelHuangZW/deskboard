@@ -135,7 +135,7 @@
   .link { background: none; border: none; color: var(--muted); font-size: 12px; }
   .link:hover { color: var(--text); }
 
-  /* ---------- 倒计时 ---------- */
+  /* ---------- 正计时 ---------- */
   .timer-body { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; padding: 10px 20px 20px; }
   .ring { position: relative; width: min(240px, 100%); aspect-ratio: 1; }
   .ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
@@ -147,24 +147,7 @@
   }
   .digits { font-size: clamp(30px, 3.4vw, 42px); font-weight: 300; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
   .state { font-size: 12px; color: var(--muted); margin-top: -4px; }
-  .panel.timer.ringing .digits { color: var(--c); animation: pulse 1s ease-in-out infinite; }
-  @keyframes pulse { 50% { opacity: .35; } }
 
-  .time-input {
-    width: 100%; max-width: 260px; height: 42px; text-align: center;
-    background: var(--panel-2); border: 1px solid transparent; border-radius: 10px; outline: none;
-    font-size: 18px; font-variant-numeric: tabular-nums; letter-spacing: .06em;
-  }
-  .time-input:focus { border-color: var(--c); }
-  .time-input.invalid { border-color: var(--danger); animation: shake .3s; }
-  .time-input:disabled { opacity: .5; }
-  @keyframes shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
-  .presets { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
-  .chip {
-    border: 1px solid var(--border); background: transparent; border-radius: 999px;
-    padding: 3px 11px; font-size: 12px; color: var(--muted);
-  }
-  .chip:hover { color: var(--text); border-color: var(--faint); }
   .controls { display: flex; gap: 10px; width: 100%; max-width: 300px; }
   .controls button {
     flex: 1; height: 40px; border-radius: 10px; border: 1px solid var(--border);
@@ -173,7 +156,6 @@
   .controls button.primary { background: var(--c); border-color: var(--c); color: #fff; }
   .controls button:hover:not(:disabled) { filter: brightness(1.08); }
   .controls button:disabled { opacity: .4; cursor: default; }
-  .input-group { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; }
 
   /* ---------- 桌面小组件模式（在 DeskBoard.app 中运行时） ---------- */
   /* 窗口本身全透明，直接透出桌面壁纸；卡片底色可在菜单栏「卡片底色」中切换 */
@@ -255,11 +237,10 @@
     <ul class="list" id="dailyList"></ul>
   </section>
 
-  <!-- 3. 倒计时 -->
+  <!-- 3. 正计时 -->
   <section class="panel timer" id="timerPanel">
     <div class="panel-head">
-      <h2>倒计时</h2>
-      <button class="link" id="testSound" title="试听提示音">🔔 试听</button>
+      <h2>今日计时</h2>
     </div>
     <div class="timer-body">
       <div class="ring">
@@ -269,20 +250,9 @@
         </svg>
         <div class="display">
           <div>
-            <div class="digits" id="digits">00:25:00</div>
+            <div class="digits" id="digits">00:00:00</div>
             <div class="state" id="timerState">就绪</div>
           </div>
-        </div>
-      </div>
-
-      <div class="input-group">
-        <input class="time-input" id="timeInput" value="00:25:00" placeholder="HH:MM:SS" inputmode="numeric">
-        <div class="presets">
-          <button class="chip" data-preset="00:05:00">5 分</button>
-          <button class="chip" data-preset="00:25:00">25 分</button>
-          <button class="chip" data-preset="00:45:00">45 分</button>
-          <button class="chip" data-preset="01:00:00">1 时</button>
-          <button class="chip" data-preset="02:00:00">2 时</button>
         </div>
       </div>
 
@@ -501,175 +471,76 @@
   document.addEventListener('visibilitychange', () => { if (!document.hidden) updateClocks(); });
   window.addEventListener('focus', updateClocks);
 
-  /* ================= 3. 倒计时 ================= */
-  let audioCtx = null;
-  let scheduledNodes = [];
-
-  function ensureAudio() {
-    if (!audioCtx) {
-      const AC = window.AudioContext || window.webkitAudioContext;
-      if (AC) audioCtx = new AC();
-    }
-    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-    return audioCtx;
-  }
-
-  // 温和的三音和弦提示音（A-C#-E 琶音），重复 3 遍
-  function chimeNodes(delaySec) {
-    const ctx = ensureAudio();
-    if (!ctx) return [];
-    const notes = [880, 1108.73, 1318.51];
-    const t0 = ctx.currentTime + Math.max(0.05, delaySec);
-    const nodes = [];
-    for (let r = 0; r < 3; r++) {
-      notes.forEach((freq, i) => {
-        const t = t0 + r * 1.4 + i * 0.16;
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.value = freq;
-        gain.gain.setValueAtTime(0.0001, t);
-        gain.gain.exponentialRampToValueAtTime(0.22, t + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.0001, t + 1.1);
-        osc.connect(gain).connect(ctx.destination);
-        osc.start(t);
-        osc.stop(t + 1.2);
-        nodes.push(osc);
-      });
-    }
-    return nodes;
-  }
-  // 开始时就用音频时钟预约提示音：浏览器在后台会节流 setInterval，但音频时钟不受影响，保证准点响铃
-  function scheduleChime(delaySec) { cancelChime(); scheduledNodes = chimeNodes(delaySec); }
-  // App 中由原生定时并播放系统提示音；浏览器中用 Web Audio
-  function armAlarm() { NATIVE ? post({ type: 'alarm', at: T.endAt }) : scheduleChime(T.remainingMs / 1000); }
-  function disarmAlarm() { NATIVE ? post({ type: 'alarm', at: null }) : cancelChime(); }
-  function cancelChime() {
-    for (const n of scheduledNodes) { try { n.stop(); n.disconnect(); } catch {} }
-    scheduledNodes = [];
-  }
-
-  function parseHMS(str) {
-    const parts = str.trim().split(/[:：]/).map(s => s.trim());
-    if (!parts.length || parts.some(p => !/^\d+$/.test(p)) || parts.length > 3) return null;
-    let [h, m, s] = [0, 0, 0];
-    if (parts.length === 3) [h, m, s] = parts.map(Number);
-    else if (parts.length === 2) [m, s] = parts.map(Number);
-    else m = Number(parts[0]);              // 纯数字 = 分钟
-    const total = h * 3600 + m * 60 + s;
-    return total > 0 && total < 100 * 3600 ? total : null;
-  }
+  /* ================= 3. 正计时 ================= */
+  // 存储结构：{ cycle: 'YYYY-MM-DD', elapsedMs, startedAt }
+  // elapsedMs 是此前累计的时长；startedAt 不为 null 表示正在计时（关掉 App 再打开会接着走）
+  // 与每日清单相同，纽约时间 08:00 进入新周期时清零并停止
   const fmtHMS = (sec) => `${pad(Math.floor(sec / 3600))}:${pad(Math.floor(sec % 3600 / 60))}:${pad(sec % 60)}`;
 
   const el = {
-    panel: $('timerPanel'), digits: $('digits'), state: $('timerState'), input: $('timeInput'),
+    digits: $('digits'), state: $('timerState'),
     start: $('startBtn'), pause: $('pauseBtn'), reset: $('resetBtn'), bar: $('ringBar'),
   };
   const CIRC = 2 * Math.PI * 90;
   el.bar.style.strokeDasharray = CIRC;
 
-  const T = { state: 'idle', totalSec: 0, remainingMs: 0, endAt: 0, iv: null };
-  const STATE_LABEL = { idle: '就绪', running: '进行中', paused: '已暂停', done: '时间到！' };
+  const freshSW = () => ({ cycle: cycleKey(), elapsedMs: 0, startedAt: null });
+  let SW = store.get('stopwatch', null);
+  if (!SW || SW.cycle !== cycleKey()) { SW = freshSW(); store.set('stopwatch', SW); }
+  let iv = null;
+
+  const elapsedMs = () => SW.elapsedMs + (SW.startedAt != null ? Date.now() - SW.startedAt : 0);
+  const stateOf = () => SW.startedAt != null ? 'running' : SW.elapsedMs > 0 ? 'paused' : 'idle';
+  const STATE_LABEL = { idle: '就绪', running: '计时中', paused: '已暂停' };
 
   function render() {
-    const sec = Math.ceil(T.remainingMs / 1000);
+    const sec = Math.floor(elapsedMs() / 1000);
+    const state = stateOf();
     el.digits.textContent = fmtHMS(sec);
-    el.state.textContent = STATE_LABEL[T.state];
-    const ratio = T.totalSec ? T.remainingMs / (T.totalSec * 1000) : 1;
-    el.bar.style.strokeDashoffset = CIRC * (1 - ratio);
-    el.start.disabled = T.state === 'running';
-    el.start.textContent = T.state === 'paused' ? '继续' : '开始';
-    el.pause.disabled = T.state !== 'running';
-    el.input.disabled = T.state === 'running' || T.state === 'paused';
-    el.panel.classList.toggle('ringing', T.state === 'done');
-    document.title = T.state === 'running' || T.state === 'paused'
-      ? `${fmtHMS(sec)} · Desk Board`
-      : T.state === 'done' ? '⏰ 时间到 · Desk Board' : 'Desk Board';
+    el.state.textContent = STATE_LABEL[state];
+    // 圆环每小时走一圈
+    el.bar.style.strokeDashoffset = CIRC * (1 - (sec % 3600) / 3600);
+    el.start.disabled = state === 'running';
+    el.start.textContent = state === 'paused' ? '继续' : '开始';
+    el.pause.disabled = state !== 'running';
+    el.reset.disabled = state === 'idle';
+    document.title = state === 'idle' ? 'Desk Board' : `${fmtHMS(sec)} · Desk Board`;
   }
 
-  function loadFromInput(showError) {
-    const sec = parseHMS(el.input.value);
-    if (sec == null) {
-      if (showError) {
-        el.input.classList.remove('invalid');
-        void el.input.offsetWidth;
-        el.input.classList.add('invalid');
-      }
-      return false;
-    }
-    el.input.classList.remove('invalid');
-    T.totalSec = sec;
-    T.remainingMs = sec * 1000;
-    store.set('timerInput', fmtHMS(sec));
-    return true;
+  function save() { store.set('stopwatch', SW); }
+  function syncTicker() {
+    clearInterval(iv);
+    iv = SW.startedAt != null ? setInterval(tick, 250) : null;
   }
 
   function start() {
-    if (T.state === 'running') return;
-    if (T.state !== 'paused') {
-      if (!loadFromInput(true)) return;
-      el.input.value = fmtHMS(T.totalSec);
-    }
-    T.endAt = Date.now() + T.remainingMs;
-    T.state = 'running';
-    armAlarm();
-    clearInterval(T.iv);
-    T.iv = setInterval(tick, 200);
-    render();
+    if (SW.startedAt != null) return;
+    SW.startedAt = Date.now();
+    save(); syncTicker(); render();
   }
 
   function pause() {
-    if (T.state !== 'running') return;
-    clearInterval(T.iv);
-    disarmAlarm();
-    T.remainingMs = Math.max(0, T.endAt - Date.now());
-    T.state = 'paused';
-    render();
+    if (SW.startedAt == null) return;
+    SW.elapsedMs = elapsedMs();
+    SW.startedAt = null;
+    save(); syncTicker(); render();
   }
 
   function reset() {
-    clearInterval(T.iv);
-    disarmAlarm();
-    T.state = 'idle';
-    if (!loadFromInput(false)) T.remainingMs = T.totalSec * 1000;
-    render();
+    SW = freshSW();
+    save(); syncTicker(); render();
   }
 
-  function tick() {
-    const left = T.endAt - Date.now();
-    if (left <= 0) return finish();
-    T.remainingMs = left;
-    render();
+  // 跨过纽约时间 08:00 时清零
+  function checkStopwatchReset() {
+    if (SW.cycle !== cycleKey()) reset();
   }
 
-  function finish() {
-    clearInterval(T.iv);
-    T.remainingMs = 0;
-    T.state = 'done';
-    if (!NATIVE) {
-      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-      if (!scheduledNodes.length) scheduledNodes = chimeNodes(0);
-    }
-    render();
-  }
+  function tick() { checkStopwatchReset(); render(); }
 
   el.start.onclick = start;
   el.pause.onclick = pause;
   el.reset.onclick = reset;
-  $('testSound').onclick = () => NATIVE ? post({ type: 'chime' }) : chimeNodes(0);
-
-  el.input.addEventListener('input', () => {
-    if (T.state === 'idle' || T.state === 'done') {
-      if (T.state === 'done') { disarmAlarm(); T.state = 'idle'; }
-      if (loadFromInput(false)) render();
-    }
-  });
-  el.input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { el.input.blur(); start(); } });
-  el.input.addEventListener('blur', () => { if (parseHMS(el.input.value) != null && T.state === 'idle') el.input.value = fmtHMS(T.totalSec); });
-
-  document.querySelectorAll('[data-preset]').forEach(btn => {
-    btn.onclick = () => { el.input.value = btn.dataset.preset; reset(); };
-  });
 
   // 空格：开始 / 暂停（输入框聚焦时不拦截）
   document.addEventListener('keydown', (e) => {
@@ -677,14 +548,17 @@
     const t = e.target;
     if (t.tagName === 'INPUT' || t.isContentEditable || t.tagName === 'BUTTON') return;
     e.preventDefault();
-    T.state === 'running' ? pause() : start();
+    SW.startedAt != null ? pause() : start();
   });
 
-  el.input.value = store.get('timerInput', '00:25:00');
-  reset();
+  setInterval(checkStopwatchReset, 10_000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(); });
+  window.addEventListener('focus', tick);
+  syncTicker();
+  render();
 
-  // 原生端在闹钟触发 / 唤醒时调用，立即刷新界面
-  window.__deskboardWake = () => { updateClocks(); if (T.state === 'running') tick(); };
+  // 原生端在唤醒时调用，立即刷新界面
+  window.__deskboardWake = () => { updateClocks(); tick(); };
 })();
 </script>
 </body>
