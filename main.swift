@@ -6,7 +6,7 @@ import Cocoa
 import WebKit
 
 let kLaunchAgentLabel = "local.deskboard"
-let kBaseSize = NSSize(width: 1000, height: 600) // 100% 缩放下的尺寸，实际乘以 scale
+let kBaseSize = NSSize(width: 340, height: 440) // 100% 缩放下的尺寸，实际乘以 scale
 let kMargin: CGFloat = 12                        // 距屏幕右、下边缘的距离
 let kScales: [CGFloat] = [0.6, 0.7, 0.8, 0.9, 1.0]
 let kTints: [(String, String)] = [("none", "透明"), ("light", "淡"), ("dark", "深")]
@@ -44,9 +44,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, WKScri
     var webView: WKWebView!
     var statusItem: NSStatusItem!
     var data: [String: String] = [:]
-    var alarmTimer: Timer?
-    var alarmActivity: NSObjectProtocol?
-    var ringItems: [DispatchWorkItem] = []
 
     let pageURL = Bundle.main.url(forResource: "index", withExtension: "html")!
     let dataURL: URL = {
@@ -135,7 +132,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, WKScri
 
         let config = WKWebViewConfiguration()
         config.userContentController.add(self, name: "deskboard")
-        config.mediaTypesRequiringUserActionForPlayback = []
         webView = WKWebView(frame: NSRect(origin: .zero, size: window.frame.size), configuration: config)
         webView.autoresizingMask = [.width, .height]
         webView.setValue(false, forKey: "drawsBackground")
@@ -224,11 +220,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, WKScri
 
     func buildStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        if let image = NSImage(systemSymbolName: "checklist", accessibilityDescription: "DeskBoard") {
+        if let image = NSImage(systemSymbolName: "stopwatch", accessibilityDescription: "DeskBoard") {
             image.isTemplate = true
             statusItem.button?.image = image
         } else {
-            statusItem.button?.title = "☑︎"
+            statusItem.button?.title = "⏱"
         }
         let menu = NSMenu()
         menu.delegate = self
@@ -341,44 +337,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, WKScri
         }
     }
 
-    // MARK: - 倒计时提示音（由原生定时，窗口被遮挡或在后台时也能准点响）
-
-    func scheduleAlarm(at epoch: Double) {
-        cancelAlarm()
-        let timer = Timer(fire: Date(timeIntervalSince1970: epoch), interval: 0, repeats: false) { [weak self] _ in
-            MainActor.assumeIsolated { self?.alarmFired() }
-        }
-        timer.tolerance = 0
-        RunLoop.main.add(timer, forMode: .common)
-        alarmTimer = timer
-        // 防止 App Nap 推迟定时器
-        alarmActivity = ProcessInfo.processInfo.beginActivity(
-            options: [.userInitiatedAllowingIdleSystemSleep, .latencyCritical], reason: "Countdown timer")
-    }
-
-    func cancelAlarm() {
-        alarmTimer?.invalidate()
-        alarmTimer = nil
-        if let a = alarmActivity { ProcessInfo.processInfo.endActivity(a) }
-        alarmActivity = nil
-        ringItems.forEach { $0.cancel() }
-        ringItems = []
-    }
-
-    func alarmFired() {
-        cancelAlarm()
-        ring(times: 3)
-        webView.evaluateJavaScript("window.__deskboardWake && window.__deskboardWake()")
-    }
-
-    func ring(times: Int) {
-        for i in 0..<times {
-            let work = DispatchWorkItem { NSSound(named: "Glass")?.play() }
-            ringItems.append(work)
-            DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 1.6, execute: work)
-        }
-    }
-
     // MARK: - JS 消息
 
     nonisolated func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
@@ -392,10 +350,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, WKScri
             guard let key = body["key"] as? String, let json = body["json"] as? String else { return }
             data[key] = json
             saveData()
-        case "alarm":
-            if let at = body["at"] as? Double { scheduleAlarm(at: at / 1000) } else { cancelAlarm() }
-        case "chime":
-            ring(times: 1)
         case "theme":
             window.appearance = NSAppearance(named: (body["value"] as? String) == "light" ? .aqua : .darkAqua)
         case "pin":

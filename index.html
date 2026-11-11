@@ -12,11 +12,7 @@
     --border: #252a35;
     --text: #e6e8ec;
     --muted: #8590a2;
-    --faint: #4a5263;
-    --master: #7aa2f7;
-    --daily: #73c991;
     --timer: #e0af68;
-    --danger: #f7768e;
     --radius: 16px;
     color-scheme: dark;
   }
@@ -27,11 +23,7 @@
     --border: #e4e7ec;
     --text: #1d2129;
     --muted: #6b7280;
-    --faint: #c3c8d1;
-    --master: #3b6fe0;
-    --daily: #2f9e5a;
     --timer: #d08a1c;
-    --danger: #e03157;
     color-scheme: light;
   }
 
@@ -47,93 +39,33 @@
     -webkit-font-smoothing: antialiased;
   }
   button { font: inherit; color: inherit; cursor: pointer; }
-  input { font: inherit; color: inherit; }
 
   /* ---------- 顶栏 ---------- */
+  .topbar, .board { width: 100%; max-width: 420px; margin: 0 auto; }
   .topbar {
     display: flex; align-items: center; justify-content: flex-end;
-    gap: 12px; padding: 14px 22px 0;
+    gap: 10px; padding: 14px 22px 0;
   }
-  .clocks { display: flex; align-items: center; gap: 18px; color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
-  .clocks b { color: var(--text); font-weight: 500; margin-left: 4px; }
   .icon-btn {
     background: transparent; border: 1px solid var(--border); border-radius: 8px;
     width: 30px; height: 30px; display: grid; place-items: center; color: var(--muted);
   }
   .icon-btn:hover { color: var(--text); background: var(--panel-2); }
 
-  /* ---------- 三列布局 ---------- */
-  .board {
-    flex: 1; min-height: 0;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(300px, .9fr);
-    gap: 16px; padding: 14px 22px 22px;
-  }
+  /* ---------- 卡片 ---------- */
+  .board { flex: 1; min-height: 0; display: flex; padding: 14px 22px 22px; }
   .panel {
-    --c: var(--master);
+    --c: var(--timer);
+    flex: 1; min-width: 0;
     background: var(--panel);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     display: flex; flex-direction: column;
     min-height: 0; overflow: hidden;
   }
-  .panel.daily { --c: var(--daily); }
-  .panel.timer { --c: var(--timer); }
-
-  .panel-head { padding: 16px 18px 6px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .panel-head { padding: 16px 18px 6px; }
   .panel-head h2 { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
   .panel-head h2::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
-  .count { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
-  .sub { padding: 0 18px 8px; font-size: 12px; color: var(--muted); }
-
-  /* ---------- 添加输入 ---------- */
-  .add-form { display: flex; gap: 8px; padding: 6px 14px 10px; }
-  .add-form input {
-    flex: 1; min-width: 0; height: 38px; padding: 0 12px;
-    background: var(--panel-2); border: 1px solid transparent; border-radius: 10px; outline: none;
-  }
-  .add-form input:focus { border-color: var(--c); }
-  .add-form input::placeholder { color: var(--muted); }
-  .add-form button {
-    height: 38px; padding: 0 14px; border: none; border-radius: 10px;
-    background: var(--c); color: #fff; font-weight: 500;
-  }
-  .add-form button:hover { filter: brightness(1.08); }
-
-  /* ---------- 列表（独立滚动） ---------- */
-  .list { flex: 1; min-height: 0; overflow-y: auto; list-style: none; padding: 2px 8px 8px; }
-  .list::-webkit-scrollbar { width: 8px; }
-  .list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 8px; }
-  .item {
-    display: flex; align-items: flex-start; gap: 10px;
-    padding: 8px 10px; border-radius: 10px;
-  }
-  .item:hover { background: var(--panel-2); }
-  .check {
-    appearance: none; -webkit-appearance: none; flex: none;
-    width: 18px; height: 18px; margin-top: 2px;
-    border: 1.5px solid var(--faint); border-radius: 5px;
-    display: grid; place-items: center; cursor: pointer; transition: all .15s;
-  }
-  .check:hover { border-color: var(--c); }
-  .check:checked { background: var(--c); border-color: var(--c); }
-  .check:checked::after {
-    content: ""; width: 4px; height: 9px; margin-top: -2px;
-    border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg);
-  }
-  .text { flex: 1; min-width: 0; word-break: break-word; white-space: pre-wrap; outline: none; border-radius: 4px; }
-  .text[contenteditable="true"] { background: var(--panel); box-shadow: 0 0 0 1px var(--c); padding: 0 4px; }
-  .item.done .text { color: var(--muted); text-decoration: line-through; }
-  .del {
-    flex: none; width: 24px; height: 24px; border: none; border-radius: 6px; background: transparent;
-    color: var(--muted); opacity: 0; display: grid; place-items: center; font-size: 16px; line-height: 1;
-  }
-  .item:hover .del, .del:focus-visible { opacity: 1; }
-  .del:hover { color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); }
-  .empty { color: var(--muted); text-align: center; padding: 40px 0; font-size: 13px; }
-
-  .link { background: none; border: none; color: var(--muted); font-size: 12px; }
-  .link:hover { color: var(--text); }
 
   /* ---------- 正计时 ---------- */
   .timer-body { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; padding: 10px 20px 20px; }
@@ -145,7 +77,7 @@
   .ring .display {
     position: absolute; inset: 0; display: grid; place-items: center; text-align: center;
   }
-  .digits { font-size: clamp(30px, 3.4vw, 42px); font-weight: 300; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+  .digits { font-size: 40px; font-weight: 300; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
   .state { font-size: 12px; color: var(--muted); margin-top: -4px; }
 
   .controls { display: flex; gap: 10px; width: 100%; max-width: 300px; }
@@ -177,68 +109,29 @@
   :root.native[data-theme="light"][data-tint="dark"] { --panel: rgba(255, 255, 255, .72); }
   /* 深色主题下文字加阴影，保证在各种壁纸上可读 */
   :root.native:not([data-theme="light"]) body { text-shadow: 0 1px 3px rgba(0, 0, 0, .55); }
-  :root.native button, :root.native input { text-shadow: none; }
+  :root.native button { text-shadow: none; }
 
   :root.native .topbar {
     height: 40px; padding: 0 6px;
     -webkit-user-select: none; user-select: none;
   }
-  :root.native .board { padding: 2px 4px 4px; gap: 12px; }
+  :root.native .board { padding: 2px 4px 4px; }
   :root.native .pin-btn { display: grid; }
   .pin-btn.on { color: var(--timer); border-color: var(--timer); }
   :root.native .icon-btn { background: var(--panel); }
-
-  /* 窄窗口：改为纵向堆叠，整页滚动 */
-  @media (max-width: 860px) {
-    body { overflow: auto; }
-    .board { grid-template-columns: 1fr; }
-    .panel { height: 70vh; }
-    .clocks .local { display: none; }
-  }
 </style>
 </head>
 <body>
 
 <header class="topbar">
-  <div class="clocks">
-    <div class="local">本地<b id="localClock">--:--</b></div>
-    <div>纽约<b id="nyClock">--:--</b></div>
-    <button class="icon-btn pin-btn" id="pinBtn" title="置于所有窗口之上">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M9 3h6l-1 6 4 4H6l4-4z"/></svg>
-    </button>
-    <button class="icon-btn" id="themeBtn" title="切换深色 / 浅色">◐</button>
-  </div>
+  <button class="icon-btn pin-btn" id="pinBtn" title="置于所有窗口之上">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M9 3h6l-1 6 4 4H6l4-4z"/></svg>
+  </button>
+  <button class="icon-btn" id="themeBtn" title="切换深色 / 浅色">◐</button>
 </header>
 
 <main class="board">
-  <!-- 1. 总任务清单 -->
-  <section class="panel master">
-    <div class="panel-head">
-      <h2>总任务清单</h2>
-      <span class="count" id="masterCount"></span>
-    </div>
-    <form class="add-form" id="masterForm" autocomplete="off">
-      <input placeholder="添加长期任务，回车确认…" maxlength="500">
-      <button type="submit">添加</button>
-    </form>
-    <ul class="list" id="masterList"></ul>
-  </section>
-
-  <!-- 2. 每日任务清单 -->
-  <section class="panel daily">
-    <div class="panel-head">
-      <h2>每日任务清单</h2>
-      <span class="count" id="dailyCount"></span>
-    </div>
-    <form class="add-form" id="dailyForm" autocomplete="off">
-      <input placeholder="添加今日任务，回车确认…" maxlength="500">
-      <button type="submit">添加</button>
-    </form>
-    <ul class="list" id="dailyList"></ul>
-  </section>
-
-  <!-- 3. 正计时 -->
-  <section class="panel timer" id="timerPanel">
+  <section class="panel" id="timerPanel">
     <div class="panel-head">
       <h2>今日计时</h2>
     </div>
@@ -301,7 +194,6 @@
       try { localStorage.setItem(PREFIX + key, json); } catch {}
     },
   };
-  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   const pad = (n) => String(n).padStart(2, '0');
 
   /* ================= 主题 ================= */
@@ -317,164 +209,26 @@
   $('pinBtn').onclick = () => post({ type: 'pin' });
   window.__deskboardPinned = (on) => $('pinBtn').classList.toggle('on', on);
 
-  /* ================= 纽约时间 & 每日周期 ================= */
+  /* ================= 每日周期（纽约时间 08:00） ================= */
   const NY_TZ = 'America/New_York';
   const RESET_HOUR = 8;
   const nyFmt = new Intl.DateTimeFormat('en-US', {
     timeZone: NY_TZ, year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
+    hour: '2-digit', hourCycle: 'h23',
   });
-  // 取纽约当地的年月日时分（Intl 会自动处理夏令时 EST/EDT）
-  function nyParts(date = new Date()) {
+  // 周期标识：纽约时间 08:00 之前算作前一天的周期（Intl 会自动处理夏令时 EST/EDT）
+  function cycleKey(date = new Date()) {
     const o = {};
     for (const p of nyFmt.formatToParts(date)) o[p.type] = p.value;
-    return { y: +o.year, m: +o.month, d: +o.day, h: +o.hour % 24, mi: +o.minute };
-  }
-  // 周期标识：纽约时间 08:00 之前算作前一天的周期
-  function cycleKey(date = new Date()) {
-    const t = nyParts(date);
-    const dt = new Date(Date.UTC(t.y, t.m - 1, t.d));
-    if (t.h < RESET_HOUR) dt.setUTCDate(dt.getUTCDate() - 1);
+    const dt = new Date(Date.UTC(+o.year, +o.month - 1, +o.day));
+    if (+o.hour % 24 < RESET_HOUR) dt.setUTCDate(dt.getUTCDate() - 1);
     return dt.toISOString().slice(0, 10);
   }
 
-  /* ================= 通用清单组件 ================= */
-  function createList({ listEl, countEl, formEl, emptyText, load, save }) {
-    let items = load();
-
-    function commit() { save(items); render(); }
-
-    function render() {
-      listEl.textContent = '';
-      const sorted = [...items.filter(i => !i.done), ...items.filter(i => i.done)];
-      if (!sorted.length) {
-        const li = document.createElement('li');
-        li.className = 'empty';
-        li.textContent = emptyText;
-        listEl.appendChild(li);
-      }
-      for (const item of sorted) listEl.appendChild(renderItem(item));
-      const done = items.filter(i => i.done).length;
-      countEl.textContent = items.length ? `${done} / ${items.length}` : '';
-    }
-
-    function renderItem(item) {
-      const li = document.createElement('li');
-      li.className = 'item' + (item.done ? ' done' : '');
-
-      const cb = document.createElement('input');
-      cb.type = 'checkbox';
-      cb.className = 'check';
-      cb.checked = item.done;
-      cb.onchange = () => { item.done = cb.checked; commit(); };
-
-      const text = document.createElement('span');
-      text.className = 'text';
-      text.textContent = item.text;
-      text.title = '双击编辑';
-      text.ondblclick = () => startEdit(text, item);
-
-      const del = document.createElement('button');
-      del.className = 'del';
-      del.title = '删除';
-      del.textContent = '×';
-      del.onclick = () => { items = items.filter(i => i.id !== item.id); commit(); };
-
-      li.append(cb, text, del);
-      return li;
-    }
-
-    function startEdit(el, item) {
-      el.contentEditable = 'true';
-      el.focus();
-      document.getSelection().selectAllChildren(el);
-      let cancelled = false;
-      el.onkeydown = (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); el.blur(); }
-        if (e.key === 'Escape') { cancelled = true; el.blur(); }
-      };
-      el.onblur = () => {
-        el.contentEditable = 'false';
-        el.onkeydown = el.onblur = null;
-        const v = el.textContent.trim();
-        if (!cancelled && v) item.text = v;
-        commit();
-      };
-    }
-
-    formEl.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const input = formEl.querySelector('input');
-      const v = input.value.trim();
-      if (!v) return;
-      items.push({ id: uid(), text: v, done: false, created: Date.now() });
-      input.value = '';
-      commit();
-      listEl.scrollTop = 0;
-    });
-
-    render();
-    return {
-      reload() { items = load(); render(); },
-      clear() { items = []; commit(); },
-    };
-  }
-
-  /* ================= 1. 总任务清单 ================= */
-  const master = createList({
-    listEl: $('masterList'), countEl: $('masterCount'), formEl: $('masterForm'),
-    emptyText: '还没有长期任务',
-    load: () => store.get('master', []),
-    save: (items) => store.set('master', items),
-  });
-
-  /* ================= 2. 每日任务清单 ================= */
-  // 存储结构：{ cycle: 'YYYY-MM-DD', items: [...] }，周期不一致即视为过期
-  let dailyCycle = cycleKey();
-  const daily = createList({
-    listEl: $('dailyList'), countEl: $('dailyCount'), formEl: $('dailyForm'),
-    emptyText: '今天还没有任务',
-    load: () => {
-      const d = store.get('daily', null);
-      return d && d.cycle === dailyCycle ? d.items : [];
-    },
-    save: (items) => store.set('daily', { cycle: dailyCycle, items }),
-  });
-  // 打开时若数据已属于旧周期，立即写回空列表
-  if ((store.get('daily', null) || {}).cycle !== dailyCycle) daily.clear();
-
-  function checkDailyReset() {
-    const key = cycleKey();
-    if (key !== dailyCycle) {
-      dailyCycle = key;
-      daily.clear();
-    }
-  }
-
-  // 多窗口同步
-  window.addEventListener('storage', (e) => {
-    if (e.key === PREFIX + 'master') master.reload();
-    if (e.key === PREFIX + 'daily') daily.reload();
-  });
-
-  /* ================= 时钟 ================= */
-  function updateClocks() {
-    const now = new Date();
-    const t = nyParts(now);
-    $('nyClock').textContent = `${pad(t.h)}:${pad(t.mi)}`;
-    $('localClock').textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
-    checkDailyReset();
-  }
-  updateClocks();
-  setInterval(updateClocks, 10_000);
-  // 电脑休眠唤醒 / 切回窗口时立即检查
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) updateClocks(); });
-  window.addEventListener('focus', updateClocks);
-
-  /* ================= 3. 正计时 ================= */
+  /* ================= 正计时 ================= */
   // 存储结构：{ cycle: 'YYYY-MM-DD', elapsedMs, startedAt }
   // elapsedMs 是此前累计的时长；startedAt 不为 null 表示正在计时（关掉 App 再打开会接着走）
-  // 与每日清单相同，纽约时间 08:00 进入新周期时清零并停止
+  // 纽约时间 08:00 进入新周期时清零并停止
   const fmtHMS = (sec) => `${pad(Math.floor(sec / 3600))}:${pad(Math.floor(sec % 3600 / 60))}:${pad(sec % 60)}`;
 
   const el = {
@@ -542,23 +296,19 @@
   el.pause.onclick = pause;
   el.reset.onclick = reset;
 
-  // 空格：开始 / 暂停（输入框聚焦时不拦截）
+  // 空格：开始 / 暂停（焦点在按钮上时交给按钮本身处理）
   document.addEventListener('keydown', (e) => {
-    if (e.code !== 'Space') return;
-    const t = e.target;
-    if (t.tagName === 'INPUT' || t.isContentEditable || t.tagName === 'BUTTON') return;
+    if (e.code !== 'Space' || e.target.tagName === 'BUTTON') return;
     e.preventDefault();
     SW.startedAt != null ? pause() : start();
   });
 
   setInterval(checkStopwatchReset, 10_000);
+  // 电脑休眠唤醒 / 切回窗口时立即检查
   document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(); });
   window.addEventListener('focus', tick);
   syncTicker();
   render();
-
-  // 原生端在唤醒时调用，立即刷新界面
-  window.__deskboardWake = () => { updateClocks(); tick(); };
 })();
 </script>
 </body>
